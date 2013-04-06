@@ -318,6 +318,7 @@ void send_frame(union sigval sv_data) {
     
     
     // We can retrieve information from the caller using data->field_name
+
     
     printf("\nthis is frame_num=%d\n", data->frame_num);
     printf("\nthis is data scale=%d\n", data->scale);
