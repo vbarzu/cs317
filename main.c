@@ -153,12 +153,7 @@ void parseRTSPcmd(char* cmd) //parse whatever command was given with the headers
 	if(headercontent != 0)
 		//because we want the client port as an int value its given to us as string
 		RTSPclientmsg.port = atoi(headercontent);
-    	/**if(RTSPclientmsg.cmd == PLAY){
-		hd = "Scale";
-		parse_request_headers(cmd,hd,headercontent);
-		RTSPclientmsg.scale = atoi(headercontent);
-        	printf("Scale in the parse: %i\n ", RTSPclientmsg.scale);
-	}**/
+
 	hd = "Session";
 	parse_request_headers(cmd,hd,headercontent);
 	if(headercontent != 0) RTSPclientmsg.session = atoi(headercontent);
@@ -281,6 +276,13 @@ void serverResponse(int cmd, int code, char* response)
                 break;
         }
     }
+    else if( code == 455 ){
+	
+ 
+                sprintf( response, "RTSP/1.0 455 Invalid State \r\nCSeq: %d\r\nSession: %d\r\n\r\n", RTSPClient.seq, RTSPClient.session );
+
+	
+    }
     else{
         if(  RTSPClient.session == 0 )
             sprintf( response, "RTSP/1.0 501 Not Implemented\r\nCSeq: %d\r\n\r\n", RTSPClient.seq );
@@ -326,24 +328,21 @@ void send_frame(union sigval sv_data) {
     
     struct send_frame_data *data = (struct send_frame_data *) sv_data.sival_ptr;
     
-    
-    
-    // We can retrieve information from the caller using data->field_name
-
-    
-    printf("\nthis is frame_num=%d\n", data->frame_num);
-    printf("\nthis is data scale=%d\n", data->scale);
+   
     // Obtain the next frame from the video file
-    while(1){
-        
-        image = cvQueryFrame(data->vid);
-        if (image == NULL) {
-            // Close the video file
-            cvReleaseCapture(&data->vid);
-            stop_timer();
-            break;
-            
-        }
+        data->frame_num++;
+	image = cvQueryFrame(data->vid);
+	while (data->frame_num % data->scale !=0){
+        	image = cvQueryFrame(data->vid);
+		data->frame_num++;
+        	if (image == NULL) {
+         	   // Close the video file
+         	   cvReleaseCapture(&data->vid);
+        	    stop_timer();
+          	  break;
+       		     
+        	}
+	}
         
         
         int WIDTH = 300;
@@ -392,17 +391,9 @@ void send_frame(union sigval sv_data) {
 		//this is to append the JPEG data to the rtp buffer
 		memcpy(&rtp_buffer[16],encoded->data.ptr, encoded->cols);
         
-		data->frame_num++;
 		//Send everything in the buffer, everything being the buffer + 4 byte added header and the jpeg data
-		printf("'\nman this is the frame number=%d\n",data->frame_num);
-		int scaletracker = data->frame_num % data->scale;
-       		 //if(scaletracker == 0){
-			int x =	send(data->socket, rtp_buffer,rtp_pk_size + 4, 0);
-			//printf("\n%d\n",x);   //Just to make sure were not getting -1, in which case I'll know that data is not being sent over the socket
-			return;
-        	//}
+		int x =	send(data->socket, rtp_buffer,rtp_pk_size + 4, 0);
         
-    }
     
     
 }
@@ -565,13 +556,11 @@ int main(int argc, char* argv[])
                 
                 if(RTSPclientmsg.cmd == SETUP){
                     if(RTSPClient.state == STATE_READY || RTSPClient.state == STATE_PLAY || RTSPClient.state == STATE_PAUSE){
-                        serverResponse(SETUP,404,response);
+                        serverResponse(SETUP,455,response);
                     }
                     else{
                         RTSPClient.lastaction = 1;
                         RTSPClient.seq   = RTSPclientmsg.seq;
-			printf("client seqnum %i \n", RTSPClient.seq);
-			printf("clientmsg seqnum %i \n", RTSPclientmsg.seq);
                         RTSPClient.session = rand();
                         strcpy(RTSPClient.videoName, RTSPclientmsg.videoName);
                         CvCapture *x = client_requested_file();
@@ -588,14 +577,14 @@ int main(int argc, char* argv[])
                 
                 else if(RTSPclientmsg.cmd == PLAY) {
                     if(RTSPClient.state == STATE_INIT){
-                        serverResponse(PLAY,404,response);
+                        serverResponse(PLAY,455,response);
                     }
                     else{
                         if(RTSPClient.state == STATE_READY){
                             CvCapture *g = client_requested_file();
                             if(g == NULL) {//try to see if the file their trying to open exists or not
                                 RTSPClient.seq = RTSPclientmsg.seq;
-                                serverResponse(PLAY, 404, response);
+                                serverResponse(PLAY, 455, response);
                             }
                             else{
                                 RTSPClient.state = STATE_PLAY;
@@ -668,7 +657,7 @@ int main(int argc, char* argv[])
                 
                 else if( RTSPclientmsg.cmd == TEARDOWN ){
                     if(RTSPClient.state == STATE_INIT){
-                        serverResponse(TEARDOWN,404,response);
+                        serverResponse(TEARDOWN,455,response);
                     }
                     else{
                         if(RTSPClient.state == STATE_PAUSE){
@@ -706,7 +695,7 @@ int main(int argc, char* argv[])
                 
                 else if(RTSPclientmsg.cmd == PAUSE){
                     if(RTSPClient.state == STATE_INIT || RTSPClient.state == STATE_READY){
-                        serverResponse(PAUSE,404,response);
+                        serverResponse(PAUSE,455,response);
                     }
                 }
                 
