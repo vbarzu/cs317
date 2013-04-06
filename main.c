@@ -306,6 +306,8 @@ struct send_frame_data {
     int frame_num;
 };
 
+
+
 // This function will be called when the timer ticks
 void send_frame(union sigval sv_data) {
 	IplImage *image;
