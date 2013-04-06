@@ -30,6 +30,9 @@
 
 timer_t play_timer;
 
+//In order to set and manipulate client states and 
+//further access client information, this struct is crucial with
+//the given fields
 struct RTSPClient {
     struct sockaddr_in client_addr;
     int fd;
@@ -41,7 +44,10 @@ struct RTSPClient {
 	int scale;
 } RTSPClient;
 
-
+//This struct is built to handle the messages
+//provided to us by the client to be parsed
+//out. RTSPClient struct will set it states
+//to fields in this struct once parsed
 struct RTSPclientmsg{
     int cmd; // the defined value of SETUP, etc.
     int session;
@@ -55,6 +61,8 @@ struct RTSPclientmsg{
     char Require[ 1024 ];
 } RTSPclientmsg;
 
+
+//Just dealing with server messages
 struct RTSPservermsg{
     int session;
     int seq;
@@ -77,15 +85,15 @@ void *get_in_addr(struct sockaddr *sa)
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-void ClientInfo()
-{
-    RTSPClient.state = STATE_INIT;
-    RTSPClient.session = 0;
-}
-
-
-
-void parseRTSPmessage(char* msg,int len,char* response)
+//@param msg   the buffer that holds the received RTSP message
+//             provided by the client
+//@param len   the length of that message
+//This method copys the message into an initialized temporary array
+//that is being used to check for string characters where comparisons
+//are made for characters. Based on these characters we call 
+//parseRTSPcmd with the msg character again so that we can now focus
+//on extracting header variables we will need for the client 
+void parseRTSPmessage(char* msg,int len)
 {
 	char myarray[1024];
 	char* tempmsg = myarray;
@@ -125,7 +133,12 @@ void parseRTSPmessage(char* msg,int len,char* response)
 	}
 }
 
-
+//@ param cmd The same message that came through as a
+// client request to parseRTSPmsg
+//This method gets our header values by initializing two arrays to pass
+//to another helper method that deals with ASCII characters that finally
+//are changed to ints as declared in our structs in order to utilize values
+//in main()
 void parseRTSPcmd(char* cmd) //parse whatever command was given with the headers
 {
 	char headerbuf[1024];
@@ -133,14 +146,16 @@ void parseRTSPcmd(char* cmd) //parse whatever command was given with the headers
 	char* headercontent = headerbuf;
 	char* hd            = hdbuf;
     
-    
+
+	//Since the PLAY command is the only case in which 
+	//we want to deal with the scale, its explicit case
+	//is dealt with here
 	if(RTSPclientmsg.cmd == PLAY){
 		hd = "Scale:";
 		parse_request_headers(cmd,hd,headercontent);
 		RTSPclientmsg.scale = atoi(headercontent);
         
 	}
-	
     
 	hd = "client_port=";
 	parse_request_headers(cmd,hd, headercontent);
@@ -159,7 +174,13 @@ void parseRTSPcmd(char* cmd) //parse whatever command was given with the headers
     
 }
 
-
+//@param msg      The entire client request once again
+//@param hd        The array used for 
+//@param hdcontent The array in which the final values we have manipulated
+// the buffer for are stored and used in parseRTSPcmd
+//This method in its entirety takes in our message and string manipulates 
+// it by moving around the array for characters needed and copying them
+//into temporary arrays which are then copied into hd content 
 void parse_request_headers( char* msg, char* hd, char* hdcontent )
 {
 	char tmparray[1024];
@@ -169,21 +190,6 @@ void parse_request_headers( char* msg, char* hd, char* hdcontent )
 	char* rn =  rnarray;
     char* header = headerarray;
 	char cmp[] = "\r\n";
-    
-	if( !strcmp( hd, "client_port=" ) ){
-		tmp = strstr( msg, hd );
-		if( tmp == NULL ){
-            hdcontent = 0;
-            return;
-        }
-        else{
-            tmp += strlen( hd );
-            int port;
-            sscanf( tmp, "%d", &port );
-            // hdcontent = _itoa( port, hdcontent, 10 );
-            return;
-        }
-    }
     
 	strcpy( tmp, msg );
 	int i;
@@ -223,7 +229,10 @@ void parse_request_headers( char* msg, char* hd, char* hdcontent )
     
 }
 
-
+//@param cmd      One of SETUP,PLAY,PAUSE, or TEARDOWN
+//@param code     One of either 200, or 404 in an OK or INVALID response
+//@param response The buffer to which we send out the response that is provided here using sprintf
+//Send out server response to client for all requests made, good or bad
 void serverResponse(int cmd, int code, char* response)
 {
     if( code == 404 ){
@@ -261,7 +270,11 @@ void serverResponse(int cmd, int code, char* response)
     }
 }
 
-
+//This method is simply used to test 
+//if the file chosen by the client can be opened or
+//not. Later on, if this method returns NULL, we will
+//return some sort of error message allowing the client
+//to know the video file chosen may not be openable.
 CvCapture* client_requested_file()
 {
     
@@ -364,7 +377,6 @@ void send_frame(union sigval sv_data) {
 		int scaletracker = data->frame_num % data->scale;
         if(scaletracker == 0){
 			int x =	send(data->socket, rtp_buffer,rtp_pk_size + 4, 0);
-			data->frame_num++;
 			printf("\n%d\n",x);   //Just to make sure were not getting -1, in which case I'll know that data is not being sent over the socket
 			return;
         }
@@ -507,7 +519,7 @@ int main(int argc, char* argv[])
                 char* resp = response;
                 int len = strlen(buffer);
                 
-                parseRTSPmessage(buffer,len, response);
+                parseRTSPmessage(buffer,len);
                 
                 struct send_frame_data data;
                 
@@ -547,7 +559,6 @@ int main(int argc, char* argv[])
                                 RTSPClient.state = STATE_PLAY;
                                 RTSPClient.lastaction = RTSPclientmsg.cmd;
                                 RTSPClient.seq = RTSPclientmsg.seq;
-                                // RTSPClient.scale = RTSPclientmsg.scale;
                                 serverResponse(PLAY, 200, response );
                                 
                                 
