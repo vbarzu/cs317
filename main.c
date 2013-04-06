@@ -17,7 +17,6 @@
 #include <time.h>
 
 
-
 #define MYPORT "9999" //the port users will be connecting to
 #define BACKLOG 10    // how many pending connections queue will hold
 #define STATE_INIT 0
