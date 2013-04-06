@@ -317,8 +317,7 @@ void send_frame(union sigval sv_data) {
     
     
     
-    // You may retrieve information from the caller using data->field_name
-    // ...
+    // We can retrieve information from the caller using data->field_name
     
     printf("\nthis is frame_num=%d\n", data->frame_num);
     printf("\nthis is data scale=%d\n", data->scale);
@@ -359,21 +358,21 @@ void send_frame(union sigval sv_data) {
         
         
         //First 4 bytes of the packet before the RTSP header
-		rtp_buffer[0] = '$';
-		rtp_buffer[1] = 0;
-		rtp_buffer[2] = (rtp_pk_size & 0x0000FF00) >> 8;
+		rtp_buffer[0] = '$';     //0x24
+		rtp_buffer[1] = 0;		//channel in use
+		rtp_buffer[2] = (rtp_pk_size & 0x0000FF00) >> 8;      
 		rtp_buffer[3] = (rtp_pk_size & 0x000000FF);
         //Now the rest of this is the RTP Header
 		rtp_buffer[4] = 0x80;           //RTP Version
 		rtp_buffer[5] = 0x9a;           //Payload type = 26
-		rtp_buffer[7]  = data->frame_num & 0x0FF;           // each packet is counted with a sequence counter
+		rtp_buffer[7]  = data->frame_num & 0x0FF;           // each packet is counted with a frame counter of which frame is coming in
 		rtp_buffer[6]  = data->frame_num >> 8;
 		rtp_buffer[11] = (ts & 0x000000FF);
 		rtp_buffer[10] = (ts & 0x0000FF00) >> 8;
 		rtp_buffer[9]  = (ts & 0x00FF0000) >> 16;
 		rtp_buffer[8]  = (ts & 0xFF000000) >> 24;
 		rtp_buffer[12] = 0x00;                               // 4 byte SSRC (sychronization source identifier)
-		rtp_buffer[13] = 0x00;                               // we just an arbitrary number here to keep it simple
+		rtp_buffer[13] = 0x00;                               // we just added 0's as arbitrary numbers.
 		rtp_buffer[14] = 0x00;
 		rtp_buffer[15] = 0x00;
         
@@ -396,6 +395,8 @@ void send_frame(union sigval sv_data) {
     
 }
 
+//Stops the currently running timer. Utilized whenever video 
+//is paused.
 void stop_timer(void) {
     
     
@@ -508,6 +509,9 @@ int main(int argc, char* argv[])
 		if(pid==0){
             while(yes){
                 
+
+				//Getting our buffer initialized in order to 
+				//receive client requests
                 char buf[1024];
                 char *buffer = buf;
                 int messRec = recv(new_fd, buffer, 1024, 0);
@@ -525,13 +529,27 @@ int main(int argc, char* argv[])
                 printf("\n%s\n", buffer);
                 
                 
+				//Getting our response buffer ready 
+				//so that after we have listened and parsed
+				//out the appropriate client message,
+				//we fill our buffer with the appropriate
+				//server response
                 char response[1024];
                 char* resp = response;
                 int len = strlen(buffer);
+				
+				//At this point we have already used "recv"
+				//to listen for client messages, we must now
+				//parse that message
                 
                 parseRTSPmessage(buffer,len);
                 
                 struct send_frame_data data;
+
+
+				//Now we deal with each seperate request as the RTSPclientmsg fields
+				//are set after parsing and we can determine what serverResponse we will
+				//provide the client as the server
                 
                 if(RTSPclientmsg.cmd == SETUP){
                     if(RTSPClient.state == STATE_READY || RTSPClient.state == STATE_PLAY || RTSPClient.state == STATE_PAUSE){
@@ -562,7 +580,7 @@ int main(int argc, char* argv[])
                     else{
                         if(RTSPClient.state == STATE_READY){
                             CvCapture *g = client_requested_file();
-                            if(g == NULL) {//try to see if the file their trying to open exists
+                            if(g == NULL) {//try to see if the file their trying to open exists or not
                                 RTSPClient.seq = RTSPclientmsg.seq;
                                 serverResponse(PLAY, 404, response);
                             }
@@ -649,7 +667,7 @@ int main(int argc, char* argv[])
                             stop_timer();
                             timer_delete(play_timer);
                             cvReleaseCapture(&data.vid);
-                            connected = 0;  //dont know where this should be right now remember to deal with this later
+                            connected = 0;  
                         }
                         else{
                             if(RTSPClient.state == STATE_READY){
@@ -666,7 +684,6 @@ int main(int argc, char* argv[])
                                     serverResponse(TEARDOWN, 200, response );
                                     stop_timer();
                                     timer_delete(play_timer);
-                                    //	cvReleaseCapture(&data.vid);
                                 }
                                 
                             }
@@ -689,13 +706,6 @@ int main(int argc, char* argv[])
                 printf("\nResponse sent to client:\n\n%s", response);
                 send(new_fd,resp,strlen(resp),0);
                 memset(&buffer[0], 0, sizeof(buffer));
-                
-                /*
-                 if(connected == 0){
-                 closesocket(new_fd); //the TEARDOWN happens here
-                 printf("\nClient disconnected\n");
-                 }
-                 */
                 
             } 
         }
