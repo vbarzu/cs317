@@ -42,6 +42,7 @@ struct RTSPClient {
     int session;
     int seq;
 	int scale;
+    char videoName[100];
 } RTSPClient;
 
 //This struct is built to handle the messages
@@ -55,6 +56,7 @@ struct RTSPclientmsg{
     int port; // get the RTP port number from SETUP command
     int err; // 0: no err. else: err occured
 	int scale;
+    char videoName[100];
     char Connection[ 1024 ];
     char Proxy_Require[ 1024 ];
     char Transport[ 1024 ];
@@ -171,6 +173,14 @@ void parseRTSPcmd(char* cmd) //parse whatever command was given with the headers
 	parse_request_headers(cmd,hd, headercontent);
 	RTSPclientmsg.seq = atoi(headercontent);
     
+    //get the videoName out
+	char *token = (char*) malloc(25);
+    char *rest;
+    token = strtok_r(cmd, " ", &rest);
+    token = strtok_r(NULL, " ", &rest);
+    strcpy(RTSPclientmsg.videoName, token);
+    printf("RTSPclient videoName: %s", RTSPclientmsg.videoName);
+    
     
 }
 
@@ -281,7 +291,7 @@ CvCapture* client_requested_file()
 	CvCapture *video;
 	
     // Open the video file.
-    video = cvCaptureFromFile("sample.avi");
+    video = cvCaptureFromFile(RTSPClient.videoName);
     return video;
     
 }
@@ -533,6 +543,7 @@ int main(int argc, char* argv[])
                         RTSPClient.seq   = RTSPclientmsg.seq;
                         RTSPClient.session = rand();
                         CvCapture *x = client_requested_file();
+                        strcpy(RTSPClient.videoName, RTSPclientmsg.videoName);
                         printf("\n%d\n",RTSPClient.state);
                         if(x == NULL){
                             serverResponse(SETUP,404,response);
