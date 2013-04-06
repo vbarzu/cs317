@@ -335,14 +335,14 @@ void send_frame(union sigval sv_data) {
 	while (data->frame_num % data->scale !=0){
         	image = cvQueryFrame(data->vid);
 		data->frame_num++;
+	}
         	if (image == NULL) {
          	   // Close the video file
          	   cvReleaseCapture(&data->vid);
         	    stop_timer();
-          	  break;
+		    return;
        		     
         	}
-	}
         
         
         int WIDTH = 300;
