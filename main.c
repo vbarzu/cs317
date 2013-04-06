@@ -148,39 +148,48 @@ void parseRTSPcmd(char* cmd) //parse whatever command was given with the headers
 	char* headercontent = headerbuf;
 	char* hd            = hdbuf;
     
-
-	//Since the PLAY command is the only case in which 
-	//we want to deal with the scale, its explicit case
-	//is dealt with here
-	if(RTSPclientmsg.cmd == PLAY){
-		hd = "Scale:";
-		parse_request_headers(cmd,hd,headercontent);
-		RTSPclientmsg.scale = atoi(headercontent);
-        
-	}
-    
 	hd = "client_port=";
 	parse_request_headers(cmd,hd, headercontent);
 	if(headercontent != 0)
 		//because we want the client port as an int value its given to us as string
 		RTSPclientmsg.port = atoi(headercontent);
-    
+    	/**if(RTSPclientmsg.cmd == PLAY){
+		hd = "Scale";
+		parse_request_headers(cmd,hd,headercontent);
+		RTSPclientmsg.scale = atoi(headercontent);
+        	printf("Scale in the parse: %i\n ", RTSPclientmsg.scale);
+	}**/
 	hd = "Session";
 	parse_request_headers(cmd,hd,headercontent);
 	if(headercontent != 0) RTSPclientmsg.session = atoi(headercontent);
 	
-	hd = "CSeq";
-	parse_request_headers(cmd,hd, headercontent);
-	RTSPclientmsg.seq = atoi(headercontent);
     
     //get the videoName out
-	char *token = (char*) malloc(25);
+    char *token = (char*) malloc(25);
     char *rest;
+    char* cmd2;
+    strcpy(cmd2, cmd);
+
     token = strtok_r(cmd, " ", &rest);
     token = strtok_r(NULL, " ", &rest);
     strcpy(RTSPclientmsg.videoName, token);
-    printf("RTSPclient videoName: %s", RTSPclientmsg.videoName);
-    
+
+
+   //try and get cseq out again 
+    token = strtok_r(NULL, "\n", &rest);
+    token = strtok_r(NULL, "\n", &rest);
+    token = strtok_r(token, " ", &rest);//(token, " ");
+    token = strtok_r(NULL, " ", &rest);
+    RTSPclientmsg.seq = atoi(token);
+   //now try to get out the speed if possible
+	if(RTSPclientmsg.cmd == PLAY){
+    token = strtok_r(cmd2, "\n", &rest);
+    token = strtok_r(NULL, "\n", &rest);
+    token = strtok_r(NULL, "\n", &rest);
+	token = strtok_r(token, " ", &rest);
+	token = strtok_r(NULL, " ", &rest);
+	RTSPclientmsg.scale = atoi(token);
+    }
     
 }
 
@@ -387,11 +396,11 @@ void send_frame(union sigval sv_data) {
 		//Send everything in the buffer, everything being the buffer + 4 byte added header and the jpeg data
 		printf("'\nman this is the frame number=%d\n",data->frame_num);
 		int scaletracker = data->frame_num % data->scale;
-        if(scaletracker == 0){
+       		 //if(scaletracker == 0){
 			int x =	send(data->socket, rtp_buffer,rtp_pk_size + 4, 0);
-			printf("\n%d\n",x);   //Just to make sure were not getting -1, in which case I'll know that data is not being sent over the socket
+			//printf("\n%d\n",x);   //Just to make sure were not getting -1, in which case I'll know that data is not being sent over the socket
 			return;
-        }
+        	//}
         
     }
     
@@ -561,6 +570,8 @@ int main(int argc, char* argv[])
                     else{
                         RTSPClient.lastaction = 1;
                         RTSPClient.seq   = RTSPclientmsg.seq;
+			printf("client seqnum %i \n", RTSPClient.seq);
+			printf("clientmsg seqnum %i \n", RTSPclientmsg.seq);
                         RTSPClient.session = rand();
                         strcpy(RTSPClient.videoName, RTSPclientmsg.videoName);
                         CvCapture *x = client_requested_file();
