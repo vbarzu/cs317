@@ -557,18 +557,17 @@ int main(int argc, char* argv[])
                         serverResponse(SETUP,404,response);
                     }
                     else{
-                        RTSPClient.state = STATE_READY;
                         RTSPClient.lastaction = 1;
                         RTSPClient.seq   = RTSPclientmsg.seq;
                         RTSPClient.session = rand();
-                        CvCapture *x = client_requested_file();
                         strcpy(RTSPClient.videoName, RTSPclientmsg.videoName);
-                        printf("\n%d\n",RTSPClient.state);
+                        CvCapture *x = client_requested_file();
                         if(x == NULL){
                             serverResponse(SETUP,404,response);
                         }
                         else{
                             serverResponse(SETUP,200,response);
+                            RTSPClient.state = STATE_READY;
                         }
                         cvReleaseCapture(&x);
                     }
