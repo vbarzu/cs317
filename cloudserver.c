@@ -615,11 +615,11 @@ int main(int argc, char* argv[])
                         	RTSPClient.session = rand();
 			}
                         strcpy(RTSPClient.videoName, RTSPclientmsg.videoName);
-                        CvCapture *x = client_requested_file();
-                        if(x == NULL){
-                            serverResponse(SETUP,404,response);
-				RTSPClient.state = STATE_INIT;
-                        }
+						const struct cloud_server *server = get_cloud_server(RTSPClient.videoName, 1);
+						if (server == NULL) {
+							    serverResponse(SETUP,404,response);
+								RTSPClient.state = STATE_INIT;
+						}
                         else{
                             serverResponse(SETUP,200,response);
                             RTSPClient.state = STATE_READY;
