@@ -390,11 +390,10 @@ void send_frame(union sigval sv_data) {
    recv(cloud_fd,frame,frame_size,0);
         
         
-        char rtp_buffer[frame_size];
+        char rtp_buffer[16];
         int rtp_pk_size = frame_size;
         int ts = data->scale * 40;
-        
-        
+
         
         //First 4 bytes of the packet before the RTSP header
 		rtp_buffer[0] = '$';     //0x24
@@ -419,8 +418,12 @@ void send_frame(union sigval sv_data) {
 		//this is to append the JPEG data to the rtp buffer
 		memcpy(&rtp_buffer[16],frame, frame_size);
         
-		//Send everything in the buffer, everything being the buffer + 4 byte added header and the jpeg data
-		int x =	send(data->socket, rtp_buffer,rtp_pk_size + 4, 0);
+		//Send everything in the buffer, RTP Header and the prefix
+		int x =	send(data->socket, rtp_buffer,16, 0);
+
+
+		//Now send the frame to the client
+		send(data->socket,frame,frame_size,0);
         
     free(frame);
 	close(cloud_fd);
