@@ -248,6 +248,7 @@ void parse_request_headers( char* msg, char* hd, char* hdcontent )
     
 }
 
+
 //@param cmd      One of SETUP,PLAY,PAUSE, or TEARDOWN
 //@param code     One of either 200, or 404 in an OK or INVALID response
 //@param response The buffer to which we send out the response that is provided here using sprintf
@@ -440,6 +441,7 @@ void send_frame(union sigval sv_data) {
 		int x =	send(data->socket, rtp_buffer,rtp_pk_size + 4, 0);
         
     free(frame);
+	close(cloud_fd);
     
 }
 
