@@ -143,54 +143,53 @@ void parseRTSPmessage(char* msg,int len)
 //in main()
 void parseRTSPcmd(char* cmd) //parse whatever command was given with the headers
 {
-	char headerbuf[1024];
-	char hdbuf[1024];
-	char* headercontent = headerbuf;
-	char* hd            = hdbuf;
-    
-	hd = "client_port=";
-	parse_request_headers(cmd,hd, headercontent);
-	if(headercontent != 0)
-		//because we want the client port as an int value its given to us as string
-		RTSPclientmsg.port = atoi(headercontent);
 
-	hd = "Session";
-	parse_request_headers(cmd,hd,headercontent);
-	if(headercontent != 0) RTSPclientmsg.session = atoi(headercontent);
-	
-	printf("Makes it here fine\n");
-    
+ char headerbuf[1024];
+ char hdbuf[1024];
+ char* headercontent = headerbuf;
+ char* hd            = hdbuf;
+
+ hd = "client_port=";
+ parse_request_headers(cmd,hd, headercontent);
+ if(headercontent != 0)
+  //because we want the client port as an int value its given to us as string
+  RTSPclientmsg.port = atoi(headercontent);
+
+ hd = "Session";
+ parse_request_headers(cmd,hd,headercontent);
+ if(headercontent != 0) RTSPclientmsg.session = atoi(headercontent);
+
+
     //get the videoName out
     char *token = (char*) malloc(25);
     char *rest;
-    char* cmd2;
-    printf("this is cmd %s \n", cmd);
-    strcpy(cmd2, cmd);
-printf("this is cmd2 %s \n", cmd2);
-printf("makes it to this fine too\n");
-	
+    char cmd2[1024];
+ char *cmdtemp = cmd2;
+ strcpy(cmdtemp, cmd);
+
 
     token = strtok_r(cmd, " ", &rest);
     token = strtok_r(NULL, " ", &rest);
     strcpy(RTSPclientmsg.videoName, token);
-	printf("means it go t some video name \n");
 
-   //try and get cseq out again 
+
+   //try and get cseq out again
     token = strtok_r(NULL, "\n", &rest);
     token = strtok_r(NULL, "\n", &rest);
     token = strtok_r(token, " ", &rest);//(token, " ");
     token = strtok_r(NULL, " ", &rest);
     RTSPclientmsg.seq = atoi(token);
+
    //now try to get out the speed if possible
-	if(RTSPclientmsg.cmd == PLAY){
-    token = strtok_r(cmd2, "\n", &rest);
+ if(RTSPclientmsg.cmd == PLAY){
+    token = strtok_r(cmdtemp, "\n", &rest);
     token = strtok_r(NULL, "\n", &rest);
     token = strtok_r(NULL, "\n", &rest);
-	token = strtok_r(token, " ", &rest);
-	token = strtok_r(NULL, " ", &rest);
-	RTSPclientmsg.scale = atoi(token);
+ token = strtok_r(token, " ", &rest);
+ token = strtok_r(NULL, " ", &rest);
+ RTSPclientmsg.scale = atoi(token);
     }
-    
+
 }
 
 //@param msg      The entire client request once again
@@ -577,7 +576,6 @@ int main(int argc, char* argv[])
                         CvCapture *x = client_requested_file();
                         if(x == NULL){
                             serverResponse(SETUP,404,response);
-				printf("in the x = null \n");
 				RTSPClient.state = STATE_INIT;
                         }
                         else{
