@@ -186,9 +186,9 @@ void parseRTSPcmd(char* cmd) //parse whatever command was given with the headers
     token = strtok_r(cmdtemp, "\n", &rest);
     token = strtok_r(NULL, "\n", &rest);
     token = strtok_r(NULL, "\n", &rest);
- token = strtok_r(token, " ", &rest);
- token = strtok_r(NULL, " ", &rest);
- RTSPclientmsg.scale = atoi(token);
+	token = strtok_r(token, " ", &rest);
+	token = strtok_r(NULL, " ", &rest);
+	RTSPclientmsg.scale = atoi(token);
     }
 
 }
@@ -296,23 +296,6 @@ void serverResponse(int cmd, int code, char* response)
             sprintf( response, "RTSP/1.0 501 Not Implemented\r\nCSeq: %d\r\nSession:%d\r\n\r\n", RTSPClient.seq, RTSPClient.session );
     }
 }
-
-//This method is simply used to test 
-//if the file chosen by the client can be opened or
-//not. Later on, if this method returns NULL, we will
-//return some sort of error message allowing the client
-//to know the video file chosen may not be openable.
-CvCapture* client_requested_file()
-{
-    
-	CvCapture *video;
-	
-    // Open the video file.
-    video = cvCaptureFromFile(RTSPClient.videoName);
-    return video;
-    
-}
-
 
 // This struct is created to save information that will be needed by the timer,
 // such as socket file descriptors, frame numbers and video captures.
