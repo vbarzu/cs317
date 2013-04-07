@@ -158,17 +158,22 @@ void parseRTSPcmd(char* cmd) //parse whatever command was given with the headers
 	parse_request_headers(cmd,hd,headercontent);
 	if(headercontent != 0) RTSPclientmsg.session = atoi(headercontent);
 	
+	printf("Makes it here fine\n");
     
     //get the videoName out
     char *token = (char*) malloc(25);
     char *rest;
     char* cmd2;
+    printf("this is cmd %s \n", cmd);
     strcpy(cmd2, cmd);
+printf("this is cmd2 %s \n", cmd2);
+printf("makes it to this fine too\n");
+	
 
     token = strtok_r(cmd, " ", &rest);
     token = strtok_r(NULL, " ", &rest);
     strcpy(RTSPclientmsg.videoName, token);
-
+	printf("means it go t some video name \n");
 
    //try and get cseq out again 
     token = strtok_r(NULL, "\n", &rest);
@@ -420,10 +425,14 @@ int main(int argc, char* argv[])
 {
 	char* port;
     
-	if(argc=2)
+	if(argc==2)
     {
         port = (argv[1]);
     }
+	else{
+		printf("Please provide a socket \n");
+		return 1;
+	}
     
 	int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
     struct addrinfo hints, *servinfo, *p;
@@ -561,17 +570,21 @@ int main(int argc, char* argv[])
                     else{
                         RTSPClient.lastaction = 1;
                         RTSPClient.seq   = RTSPclientmsg.seq;
-                        RTSPClient.session = rand();
+			if(RTSPClient.session ==NULL){
+                        	RTSPClient.session = rand();
+			}
                         strcpy(RTSPClient.videoName, RTSPclientmsg.videoName);
                         CvCapture *x = client_requested_file();
                         if(x == NULL){
                             serverResponse(SETUP,404,response);
+				printf("in the x = null \n");
+				RTSPClient.state = STATE_INIT;
                         }
                         else{
                             serverResponse(SETUP,200,response);
                             RTSPClient.state = STATE_READY;
+			    cvReleaseCapture(&x);
                         }
-                        cvReleaseCapture(&x);
                     }
                 }
                 
