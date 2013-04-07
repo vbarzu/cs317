@@ -330,10 +330,6 @@ int make_connection(const char *name, int port){
     int rv;
     char s[INET6_ADDRSTRLEN];
 
-    if (argc != 2) {
-        fprintf(stderr,"usage: client hostname\n");
-        exit(1);
-    }
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
@@ -401,29 +397,18 @@ void send_frame(union sigval sv_data) {
 
 	int cloud_fd  = make_connection(cloud->server,cloud->port);
 
-    // Obtain the next frame from the video file
-        data->frame_num++;
-        
-        
-        int WIDTH = 300;
-        int HEIGHT = 300;
-        
-        // Convert the frame to a smaller size (WIDTH x HEIGHT)
-        thumb = cvCreateMat(WIDTH, HEIGHT, CV_8UC3);
-        cvResize(image, thumb, CV_INTER_AREA);
-        
-        
-        
-        // Encode the frame in JPEG format with JPEG quality 30%.
-        const static int encodeParams[] = { CV_IMWRITE_JPEG_QUALITY, 30 };
-        encoded = cvEncodeImage(".jpeg", thumb, encodeParams);
-        // After the call above, the encoded data is in encoded->data.ptr
-        // and has a length of encoded->cols bytes.
+   char num_buf[6];
+   recv(cloud_fd, num_buf, 5, 0);
+   num_buf[5] = '\0';
+   int frame_size = strtoul(num_buf, NULL, 10);
+
+   char *frame = malloc(frame_size);	
+   recv(cloud_fd,frame,frame_size,0);
         
         int jpeg_size = encoded->cols;
         int rtp_header_size = 12;
-        char rtp_buffer[jpeg_size + rtp_header_size + 4];
-        int rtp_pk_size = rtp_header_size + jpeg_size;
+        char rtp_buffer[frame_size];
+        int rtp_pk_size = frame_size;
         int ts = data->scale * 40;
         
         
@@ -449,12 +434,12 @@ void send_frame(union sigval sv_data) {
         
         
 		//this is to append the JPEG data to the rtp buffer
-		memcpy(&rtp_buffer[16],encoded->data.ptr, encoded->cols);
+		memcpy(&rtp_buffer[16],frame, frame_size);
         
 		//Send everything in the buffer, everything being the buffer + 4 byte added header and the jpeg data
 		int x =	send(data->socket, rtp_buffer,rtp_pk_size + 4, 0);
         
-    
+    free(frame);
     
 }
 
