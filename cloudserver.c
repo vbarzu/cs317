@@ -316,13 +316,18 @@ CvCapture* client_requested_file()
 // This struct is created to save information that will be needed by the timer,
 // such as socket file descriptors, frame numbers and video captures.
 struct send_frame_data {
-    CvCapture *vid;
     int socket;
     int scale;
     int frame_num;
 	char* vidname;
 };
 
+
+int make_connection(const char *name, int port){
+
+
+
+}
 
 
 // This function will be called when the timer ticks
@@ -334,21 +339,12 @@ void send_frame(union sigval sv_data) {
     
     struct send_frame_data *data = (struct send_frame_data *) sv_data.sival_ptr;
     
-   
+    struct cloud_server  *cloud = get_cloud_server(data->vidname, data->frame_num);
+
+	int cloud_fd  = make_connection(cloud->server,cloud->port);
+
     // Obtain the next frame from the video file
         data->frame_num++;
-	image = cvQueryFrame(data->vid);
-	while (data->frame_num % data->scale !=0){
-        	image = cvQueryFrame(data->vid);
-		data->frame_num++;
-	}
-        	if (image == NULL) {
-         	   // Close the video file
-         	   cvReleaseCapture(&data->vid);
-        	    stop_timer();
-		    return;
-       		     
-        	}
         
         
         int WIDTH = 300;
