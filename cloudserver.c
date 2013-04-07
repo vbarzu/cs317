@@ -307,6 +307,11 @@ struct send_frame_data {
 };
 
 
+//@param name   The name of the server we are connecting to
+//@param port   The number of the port that we are connecting to
+//Emualtes the client connection to the cloud server (as we are the client)
+//and we want to access and request data from the cloud (server)
+//What we return here is a socket for a connnection to the cloud
 int make_connection(const char *name, int port){
 	int sockfd, numbytes;  
     char buf[MAXDATASIZE];
@@ -361,7 +366,7 @@ int make_connection(const char *name, int port){
 
     printf("client: received '%s'\n",buf);
 
-    close(sockfd);
+    return sockfd;
 
 
 
@@ -369,11 +374,9 @@ int make_connection(const char *name, int port){
 
 
 // This function will be called when the timer ticks
+// This time we want to initialize a cloud server struct so that we
+//can access its video name and port fields in order to create a connection
 void send_frame(union sigval sv_data) {
-	
-
-	
-    
     
     struct send_frame_data *data = (struct send_frame_data *) sv_data.sival_ptr;
     
