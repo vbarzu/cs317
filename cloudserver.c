@@ -406,8 +406,7 @@ void send_frame(union sigval sv_data) {
    char *frame = malloc(frame_size);	
    recv(cloud_fd,frame,frame_size,0);
         
-        int jpeg_size = encoded->cols;
-        int rtp_header_size = 12;
+        
         char rtp_buffer[frame_size];
         int rtp_pk_size = frame_size;
         int ts = data->scale * 40;
